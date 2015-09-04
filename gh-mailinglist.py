@@ -78,6 +78,8 @@ def handle_pull_request_review(payload, repos):
     send_email(email_and_name['email'], 'New comment on pull request', body)
 
 def handle_pull_request_comment(payload, repos):
+    if payload['comment']['user']['login'] == "samba-team-bot":
+        return
     email_and_name = repos.get_email_and_name(payload['repository']['name'])
     body = 'New comment by %s on Samba %s repository\n\n%s\nDescription:%s\n' % (payload['comment']['user']['login'], email_and_name['name'], payload['comment']['html_url'], payload['comment']['body'])
 
