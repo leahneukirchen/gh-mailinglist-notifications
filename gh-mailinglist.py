@@ -12,7 +12,9 @@ import email
 from email.parser import Parser
 import smtplib
 from email.mime.text import MIMEText
+from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
+import urllib2
 
 HOST_NAME = sys.argv[1]
 PORT_NUMBER = int(sys.argv[2])
@@ -28,7 +30,7 @@ def is_int(s):
     except ValueError:
         return False
 
-def send_email(to, subject, body):
+def send_email(to, subject, body, ref=None, pr_number=None, patch=None):
     outer = MIMEMultipart()
     outer['Subject'] = subject
     outer['To'] = to
@@ -36,6 +38,13 @@ def send_email(to, subject, body):
     outer['Date'] = email.utils.formatdate(localtime = True)
     outer.preamble = 'GitHub notification mails are now in MIME to allow UTF8.\n'
     outer.attach(MIMEText(body, 'plain', 'utf8'))
+    if patch is not None:
+        msg = MIMEApplication(patch, 'text/x-diff', email.encoders.encode_base64)
+        # Set the filename parameter
+        msg.add_header('Content-Disposition', 'attachment',
+                       filename="github-pr-%s-%d.patch" % (ref, pr_number))
+        outer.attach(msg)
+
     msg = outer.as_string()
     if not DEBUG:
         s = smtplib.SMTP('localhost')
@@ -52,14 +61,35 @@ def is_pull_request_url(potential_url):
     except ValueError:
         return False
 
+def handle_pull_request_mail(payload, repos, action):
+    email_and_name = repos.get_email_and_name(payload['repository']['name'])
+    body = 'There\'s a %s pull request by %s against %s on the Samba %s repository\n\n' \
+           % (action,
+              payload['sender']['login'],
+              payload['pull_request']['base']['ref'],
+              email_and_name['name'])
+
+    body = body + "%s %s\n" % (payload['pull_request']['head']['repo']['html_url'],
+                               payload['pull_request']['head']['ref'])
+    body = body + '%s\n%s\nDescription: %s\n' % (payload['pull_request']['title'], payload['pull_request']['html_url'], payload['pull_request']['body'])
+    try:
+        response = urllib2.urlopen(payload['pull_request']['patch_url'])
+        patch = response.read()
+        body = body + "\nA patch file from %s is attached" % payload['pull_request']['patch_url']
+    except HTTPError:
+        body = body + "\nNo patch file attached, unable to fetch patch file from %s" % payload['pull_request']['patch_url']
+        patch = None
+    send_email(email_and_name['email'],
+               "%s pull request - %s" % (action, payload['pull_request']['title']),
+               body, payload['pull_request']['head']['ref'],
+               payload['pull_request']['number'],
+               patch)
 
 def handle_pull_request_opened(payload, repos):
-    email_and_name = repos.get_email_and_name(payload['repository']['name'])
-    body = 'There\'s a new pull request by %s on the Samba %s repository\n\n' % (payload['sender']['login'], email_and_name['name'])
+    handle_pull_request_mail(payload, repos, action="new")
 
-    body = body + '%s\n%s\nDescription: %s\n' % (payload['pull_request']['title'], payload['pull_request']['html_url'], payload['pull_request']['body'])
-    #add link
-    send_email(email_and_name['email'], "New pull request - %s" % (payload['pull_request']['title']), body)
+def handle_pull_request_synchronize(payload, repos):
+    handle_pull_request_mail(payload, repos, action="updated")
 
 def handle_pull_request_closed(payload, repos):
     email_and_name = repos.get_email_and_name(payload['repository']['name'])
@@ -105,6 +135,8 @@ def handle_hook(event, payload, repos):
             return handle_pull_request_opened(payload, repos)
         elif payload['action'] == 'closed':
             return handle_pull_request_closed(payload, repos)
+        elif payload['action'] == 'synchronize':
+            return handle_pull_request_synchronize(payload, repos)
     elif event == 'pull_request_review_comment':
         return handle_pull_request_review(payload, repos)
 
