@@ -61,17 +61,18 @@ def is_pull_request_url(potential_url):
     except ValueError:
         return False
 
-def handle_pull_request_mail(payload, repos, action):
+def handle_pull_request_mail(payload, repos, action_body, action_subject):
     email_and_name = repos.get_email_and_name(payload['repository']['name'])
-    body = 'There\'s a %s pull request by %s against %s on the Samba %s repository\n\n' \
-           % (action,
+    body = 'There is %s pull request by %s against %s on the Samba %s repository\n\n' \
+           % (action_body,
               payload['sender']['login'],
               payload['pull_request']['base']['ref'],
               email_and_name['name'])
 
     body = body + "%s %s\n" % (payload['pull_request']['head']['repo']['html_url'],
                                payload['pull_request']['head']['ref'])
-    body = body + '%s\n%s\nDescription: %s\n' % (payload['pull_request']['title'], payload['pull_request']['html_url'], payload['pull_request']['body'])
+    body = body + "%s\n" % (payload['pull_request']['html_url'])
+    body = body + '\n%s\n%s\n' % (payload['pull_request']['title'], payload['pull_request']['body'])
     try:
         response = urllib2.urlopen(payload['pull_request']['patch_url'])
         patch = response.read()
@@ -79,17 +80,20 @@ def handle_pull_request_mail(payload, repos, action):
     except HTTPError:
         body = body + "\nNo patch file attached, unable to fetch patch file from %s" % payload['pull_request']['patch_url']
         patch = None
-    send_email(email_and_name['email'],
-               "%s pull request - %s" % (action, payload['pull_request']['title']),
+
+    subject = "%s PR: %s - %s" % (action_subject,
+                                  payload['pull_request']['head']['ref'],
+                                  payload['pull_request']['title'])
+    send_email(email_and_name['email'], subject,
                body, payload['pull_request']['head']['ref'],
                payload['pull_request']['number'],
                patch)
 
 def handle_pull_request_opened(payload, repos):
-    handle_pull_request_mail(payload, repos, action="new")
+    handle_pull_request_mail(payload, repos, action_body="a new", action_subject="New")
 
 def handle_pull_request_synchronize(payload, repos):
-    handle_pull_request_mail(payload, repos, action="updated")
+    handle_pull_request_mail(payload, repos, action_body="an updated", action_subject="Updated")
 
 def handle_pull_request_closed(payload, repos):
     email_and_name = repos.get_email_and_name(payload['repository']['name'])
@@ -104,14 +108,14 @@ def handle_pull_request_closed(payload, repos):
 
 def handle_pull_request_review(payload, repos):
     email_and_name = repos.get_email_and_name(payload['repository']['name'])
-    body = 'New comment by %s on Samba %s repository\n\n%s\nDescription:%s\n' % (payload['comment']['user']['login'], email_and_name['name'], payload['comment']['html_url'], payload['comment']['body'])
+    body = 'New review comment by %s on Samba %s repository\n\n%s\nComment:\n%s\n' % (payload['comment']['user']['login'], email_and_name['name'], payload['comment']['html_url'], payload['comment']['body'])
     send_email(email_and_name['email'], 'New comment on pull request', body)
 
 def handle_pull_request_comment(payload, repos):
     if payload['comment']['user']['login'] == "samba-team-bot":
         return
     email_and_name = repos.get_email_and_name(payload['repository']['name'])
-    body = 'New comment by %s on Samba %s repository\n\n%s\nDescription:%s\n' % (payload['comment']['user']['login'], email_and_name['name'], payload['comment']['html_url'], payload['comment']['body'])
+    body = 'New comment by %s on Samba %s repository\n\n%s\nComment:\n%s\n' % (payload['comment']['user']['login'], email_and_name['name'], payload['comment']['html_url'], payload['comment']['body'])
 
     send_email(email_and_name['email'], 'New comment on pull request - %s' % (payload['issue']['title']), body)
 
