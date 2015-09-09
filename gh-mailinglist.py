@@ -32,6 +32,10 @@ def is_int(s):
 
 def send_email(to, subject, body, ref=None, pr_number=None, patch=None):
     outer = MIMEMultipart()
+    subject.replace('\n', '  ')
+    subject.replace('\r', '  ')
+    to.replace('\n', '  ')
+    to.replace('\r', '  ')
     outer['Subject'] = subject
     outer['To'] = to
     outer['From'] = 'github@samba.org'
