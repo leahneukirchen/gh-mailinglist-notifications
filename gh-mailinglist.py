@@ -15,6 +15,7 @@ from email.mime.text import MIMEText
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 import urllib2
+from email.header import Header
 
 HOST_NAME = sys.argv[1]
 PORT_NUMBER = int(sys.argv[2])
@@ -30,15 +31,29 @@ def is_int(s):
     except ValueError:
         return False
 
-def send_email(to, subject, body, ref=None, pr_number=None, patch=None):
+def send_email(repo, email_and_name, subject,
+               body, new_thread=False,
+               ref=None, pr_number=None, patch=None):
+
+    to = email_and_name['email']
+    uuid = email_and_name['uuid']
+    msg_id_domain = email_and_name['msg-id-domain']
     outer = MIMEMultipart()
     subject.replace('\n', '  ')
     subject.replace('\r', '  ')
     to.replace('\n', '  ')
     to.replace('\r', '  ')
-    outer['Subject'] = subject
+    outer['Subject'] = Header(subject, 'utf8')
     outer['To'] = to
     outer['From'] = 'github@samba.org'
+    outer.add_header("Reply-to", to)
+    msgid = "<gh-mailinglist-notifications-%s-%s-%d@%s>" \
+          % (uuid, repo, pr_number, msg_id_domain)
+    if new_thread:
+        outer.add_header("Message-ID", msgid)
+    else:
+        outer.add_header("In-Reply-To", msgid)
+        outer.add_header("References", msgid)
     outer['Date'] = email.utils.formatdate(localtime = True)
     outer.preamble = 'GitHub notification mails are now in MIME to allow UTF8.\n'
     outer.attach(MIMEText(body, 'plain', 'utf8'))
@@ -65,8 +80,16 @@ def is_pull_request_url(potential_url):
     except ValueError:
         return False
 
-def handle_pull_request_mail(payload, repos, action_body, action_subject):
-    email_and_name = repos.get_email_and_name(payload['repository']['name'])
+def handle_pull_request_mail(payload, repos, new_pull_req=False):
+    if new_pull_req:
+        action_body="a new"
+        action_subject="[PR PATCH]"
+    else:
+        action_body="an updated"
+        action_subject="Re: [PR PATCH] [Updated]"
+
+    repo = payload['repository']['name']
+    email_and_name = repos.get_email_and_name(repo)
     body = 'There is %s pull request by %s against %s on the Samba %s repository\n\n' \
            % (action_body,
               payload['sender']['login'],
@@ -85,57 +108,75 @@ def handle_pull_request_mail(payload, repos, action_body, action_subject):
         body = body + "\nNo patch file attached, unable to fetch patch file from %s" % payload['pull_request']['patch_url']
         patch = None
 
-    subject = "%s PR: %s - %s" % (action_subject,
-                                  payload['pull_request']['head']['ref'],
-                                  payload['pull_request']['title'])
-    send_email(email_and_name['email'], subject,
-               body, payload['pull_request']['head']['ref'],
-               payload['pull_request']['number'],
-               patch)
+    ref = payload['pull_request']['head']['ref']
+    pr_number = payload['pull_request']['number']
+    title = payload['pull_request']['title']
+
+    subject = "%s %s" % (action_subject, title)
+    send_email(repo, email_and_name, subject,
+               ref=ref, pr_number=pr_number,
+               body=body,
+               patch=patch, new_thread=new_pull_req)
 
 def handle_pull_request_opened(payload, repos):
-    handle_pull_request_mail(payload, repos, action_body="a new", action_subject="New")
+    handle_pull_request_mail(payload, repos, new_pull_req=True)
 
 def handle_pull_request_synchronize(payload, repos):
-    handle_pull_request_mail(payload, repos, action_body="an updated", action_subject="Updated")
+    handle_pull_request_mail(payload, repos, new_pull_req=False)
 
 def handle_pull_request_closed(payload, repos):
-    email_and_name = repos.get_email_and_name(payload['repository']['name'])
+    repo = payload['repository']['name']
+    email_and_name = repos.get_email_and_name(repo)
 
+    title = payload['pull_request']['title']
     was_merged = payload['pull_request']['merged']
     merged_or_closed = "merged" if was_merged else "closed"
     body = 'There\'s a %s pull request on the Samba %s repository\n\n' % (merged_or_closed, email_and_name['name'])
 
-    body = body + '%s\n%s\nDescription: %s\n' % (payload['pull_request']['title'], payload['pull_request']['html_url'], payload['pull_request']['body'])
+    body = body + '%s\n%s\nDescription: %s\n' % (title, payload['pull_request']['html_url'], payload['pull_request']['body'])
     merged_or_closed = "Merged" if was_merged else "Closed"
-    send_email(email_and_name['email'], "%s pull request - %s" % (merged_or_closed, payload['pull_request']['title']), body)
+    send_email(repo, email_and_name,
+               "Re: [PR PATCH] [%s]: %s" % (merged_or_closed, title),
+               body,
+               pr_number=payload['pull_request']['number'])
 
 def handle_pull_request_review(payload, repos):
-    email_and_name = repos.get_email_and_name(payload['repository']['name'])
-    body = 'New review comment by %s on Samba %s repository\n\n%s\nComment:\n%s\n' % (payload['comment']['user']['login'], email_and_name['name'], payload['comment']['html_url'], payload['comment']['body'])
-    send_email(email_and_name['email'], 'New comment on pull request', body)
+    repo = payload['repository']['name']
+    email_and_name = repos.get_email_and_name(repo)
+    body = 'New review comment by %s on %s repository\n\n%s\nComment:\n%s\n' % (payload['comment']['user']['login'], email_and_name['name'], payload['comment']['html_url'], payload['comment']['body'])
+    title = payload['issue']['title']
+    send_email(repo, email_and_name, "Re: [PR REVIEW] %s" % title, body=body,
+               pr_number=payload['pull_request']['number'])
 
 def handle_pull_request_comment(payload, repos):
-    if payload['comment']['user']['login'] == "samba-team-bot":
+    repo = payload['repository']['name']
+    email_and_name = repos.get_email_and_name(repo)
+    bot = email_and_name['bot']
+    if payload['comment']['user']['login'] == bot:
         return
-    email_and_name = repos.get_email_and_name(payload['repository']['name'])
-    body = 'New comment by %s on Samba %s repository\n\n%s\nComment:\n%s\n' % (payload['comment']['user']['login'], email_and_name['name'], payload['comment']['html_url'], payload['comment']['body'])
+    body = 'New comment by %s on %s repository\n\n%s\nComment:\n%s\n' % (payload['comment']['user']['login'], email_and_name['name'], payload['comment']['html_url'], payload['comment']['body'])
+    title = payload['issue']['title']
 
-    send_email(email_and_name['email'], 'New comment on pull request - %s' % (payload['issue']['title']), body)
+    send_email(repo, email_and_name, "Re: %s" % title, body=body,
+               pr_number=payload['issue']['number'])
 
 def handle_issue_comment(payload, repos):
     if is_pull_request_url(payload['issue']['html_url']):
         handle_pull_request_comment(payload, repos)
 
 def handle_issue_opened(payload,repos):
-    email_and_name = repos.get_email_and_name(payload['repository']['name'])
-    body = 'New issue by %s on Samba %s repository\n\n%s\nDescription: %s\n' % (payload['issue']['user']['login'], email_and_name['name'], payload['issue']['html_url'], payload['issue']['body'])
-    send_email(email_and_name['email'], 'New issue posted - %s' % (payload['issue']['title']), body)
+    repo = payload['repository']['name']
+    email_and_name = repos.get_email_and_name(repo)
+    body = 'New issue by %s on %s repository\n\n%s\nDescription: %s\n' % (payload['issue']['user']['login'], email_and_name['name'], payload['issue']['html_url'], payload['issue']['body'])
+    send_email(repo, email_and_name, "[ISSUE] %s" % title, body=body, new_thread=True,
+               pr_number=payload['issue']['number'])
 
 def handle_issue_closed(payload,repos):
+    repo = payload['repository']['name']
     email_and_name = repos.get_email_and_name(payload['repository']['name'])
-    body = 'Closed issue by %s on Samba %s repository\n\n%s\nDescription: %s\n' % (payload['issue']['user']['login'], email_and_name['name'], payload['issue']['html_url'], payload['issue']['body'])
-    send_email(email_and_name['email'], 'Issue Closed - %s' % (payload['issue']['title']), body)
+    body = 'Closed issue by %s on %s repository\n\n%s\nDescription: %s\n' % (payload['issue']['user']['login'], email_and_name['name'], payload['issue']['html_url'], payload['issue']['body'])
+    send_email(repo, email_and_name, "Re: [ISSUE] [CLOSED] %s" % title, body=body,
+               pr_number=payload['issue']['number'])
 
 def handle_hook(event, payload, repos):
     if event == 'pull_request':
