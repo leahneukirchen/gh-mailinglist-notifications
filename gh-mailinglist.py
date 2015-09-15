@@ -36,6 +36,7 @@ def send_email(repo, email_and_name, subject,
                ref=None, pr_number=None, patch=None):
 
     to = email_and_name['email']
+    fromaddr = email_and_name['from']
     uuid = email_and_name['uuid']
     msg_id_domain = email_and_name['msg-id-domain']
     outer = MIMEMultipart()
@@ -45,7 +46,7 @@ def send_email(repo, email_and_name, subject,
     to.replace('\r', '  ')
     outer['Subject'] = Header(subject, 'utf8')
     outer['To'] = to
-    outer['From'] = 'github@samba.org'
+    outer['From'] = fromaddr
     outer.add_header("Reply-to", to)
     msgid = "<gh-mailinglist-notifications-%s-%s-%d@%s>" \
           % (uuid, repo, pr_number, msg_id_domain)
@@ -67,7 +68,7 @@ def send_email(repo, email_and_name, subject,
     msg = outer.as_string()
     if not DEBUG:
         s = smtplib.SMTP('localhost')
-        s.sendmail('github@samba.org', [to], msg)
+        s.sendmail(fromaddr, [to], msg)
         s.quit()
     else:
         print msg

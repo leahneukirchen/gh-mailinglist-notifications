@@ -2,6 +2,7 @@
   "samba": {
     "name": "Samba Github",
     "email": "samba-technical@lists.samba.org",
+    "from": "github@samba.org",
     "msg-id-domain": "samba.org",
     "bot": "samba-team-bot",
     "uuid": "7cbc67a5-3baa-45ba-be96-ccfa955fbabf"
