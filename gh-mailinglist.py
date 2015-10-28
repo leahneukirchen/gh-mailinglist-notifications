@@ -40,10 +40,10 @@ def send_email(repo, email_and_name, subject,
     uuid = email_and_name['uuid']
     msg_id_domain = email_and_name['msg-id-domain']
     outer = MIMEMultipart()
-    subject.replace('\n', '  ')
-    subject.replace('\r', '  ')
-    to.replace('\n', '  ')
-    to.replace('\r', '  ')
+    subject = subject.replace('\n', '  ')
+    subject = subject.replace('\r', '  ')
+    to = to.replace('\n', '  ')
+    to = to.replace('\r', '  ')
     outer['Subject'] = Header(subject, 'utf8')
     outer['To'] = to
     outer['From'] = fromaddr
