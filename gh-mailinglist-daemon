@@ -224,9 +224,7 @@ def handle_hook(event, payload, repos):
 def verify_signature(payload, hub_signature):
     signature = 'sha1=' + \
                 hmac.new(SECRET_KEY, payload, hashlib.sha1).hexdigest()
-    #should use compare_digest but isn't in our current python implementation.
-    #also, we're not protecting nuclear secrets so we should be fine
-    return signature == hub_signature
+    return hmac.compare_digest(signature, hub_signature)
 
 class JsonRepos:
     def __init__(self,json_file):
