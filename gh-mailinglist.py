@@ -9,6 +9,7 @@ import json
 import hashlib
 import hmac
 import email
+import re
 from email.parser import Parser
 import smtplib
 from email.mime.text import MIMEText
@@ -22,14 +23,6 @@ PORT_NUMBER = int(sys.argv[2])
 SECRET_KEY = sys.argv[3]
 DEBUG = len(sys.argv) >= 5;
 
-
-# from https://stackoverflow.com/questions/1265665/python-check-if-a-string-represents-an-int-without-using-try-except
-def is_int(s):
-    try:
-        int(s)
-        return True
-    except ValueError:
-        return False
 
 def send_email(repo, email_and_name, subject,
                body, new_thread=False,
@@ -76,8 +69,7 @@ def send_email(repo, email_and_name, subject,
 def is_pull_request_url(potential_url):
     try:
         parse_result = urlparse.urlparse(potential_url)
-        path_array = parse_result[2].split('/')
-        return (path_array[len(path_array) - 2] == 'pull') and is_int(path_array[len(path_array) - 1])
+        return re.search("/pull/\d+$", parse_result.path) is not None
     except ValueError:
         return False
 
