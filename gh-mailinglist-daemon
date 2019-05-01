@@ -178,6 +178,7 @@ def handle_issue_comment(payload, repos):
 def handle_issue_opened(payload,repos):
     repo = payload['repository']['name']
     email_and_name = repos.get_email_and_name(repo)
+    title = payload['issue']['title']
     body = 'New issue by %s on %s repository\n\n%s\nDescription: %s\n' \
            % (payload['issue']['user']['login'],
               email_and_name['name'],
