@@ -1,10 +1,10 @@
 {
-  "samba": {
-    "name": "Samba Test",
-    "email": "testlist@lists.samba.org",
-    "from": "github@samba.org",
-    "msg-id-domain": "samba.org",
-    "bot": "samba-team-bot",
-    "uuid": "c8f61f94-8ec2-42ac-8b6a-7fd4e3a7b491"
+  "mblaze": {
+    "name": "mblaze",
+    "email": "mblaze-github@inbox.vuxu.org",
+    "from": "mblaze-github@inbox.vuxu.org",
+    "msg-id-domain": "inbox.vuxu.org",
+    "bot": "mblaze-github-bot",
+    "uuid": "fa6558a0-26e0-48f6-803f-f5a8af34f6a8"
   }
 }
