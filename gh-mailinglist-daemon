@@ -172,8 +172,7 @@ def handle_pull_request_comment(payload, repos):
                pr_number=payload['issue']['number'])
 
 def handle_issue_comment(payload, repos):
-    if is_pull_request_url(payload['issue']['html_url']):
-        handle_pull_request_comment(payload, repos)
+    handle_pull_request_comment(payload, repos)
 
 def handle_issue_opened(payload,repos):
     repo = payload['repository']['name']
