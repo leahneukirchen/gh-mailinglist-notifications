@@ -177,12 +177,12 @@ def handle_issue_comment(payload, repos):
 def handle_issue_opened(payload,repos):
     repo = payload['repository']['name']
     email_and_name = repos.get_email_and_name(repo)
-    title = payload['issue']['title']
     body = 'New issue by %s on %s repository\n\n%s\nDescription: %s\n' \
            % (payload['issue']['user']['login'],
               email_and_name['name'],
               payload['issue']['html_url'],
               payload['issue']['body'])
+    title = payload['issue']['title']
     send_email(repo, email_and_name, "[ISSUE] %s" % title,
                body=body, new_thread=True,
                pr_number=payload['issue']['number'])
@@ -195,6 +195,7 @@ def handle_issue_closed(payload,repos):
               email_and_name['name'],
               payload['issue']['html_url'],
               payload['issue']['body'])
+    title = payload['issue']['title']
     send_email(repo, email_and_name, "Re: [ISSUE] [CLOSED] %s" % title,
                body=body, pr_number=payload['issue']['number'])
 
