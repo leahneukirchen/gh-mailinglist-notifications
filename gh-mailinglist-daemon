@@ -84,7 +84,7 @@ def handle_pull_request_mail(payload, repos, new_pull_req=False):
     repo = payload['repository']['name']
     email_and_name = repos.get_email_and_name(repo)
     body = 'There is %s pull request by %s ' \
-           'against %s on the Samba %s repository\n\n' \
+           'against %s on the %s repository\n\n' \
            % (action_body,
               payload['sender']['login'],
               payload['pull_request']['base']['ref'],
@@ -130,7 +130,7 @@ def handle_pull_request_closed(payload, repos):
     title = payload['pull_request']['title']
     was_merged = payload['pull_request']['merged']
     merged_or_closed = "merged" if was_merged else "closed"
-    body = 'There\'s a %s pull request on the Samba %s repository\n\n' \
+    body = 'There\'s a %s pull request on the %s repository\n\n' \
            % (merged_or_closed, email_and_name['name'])
 
     body += '%s\n%s\nDescription: %s\n' \
