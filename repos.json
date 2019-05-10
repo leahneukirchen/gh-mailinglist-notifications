@@ -6,5 +6,13 @@
     "msg-id-domain": "inbox.vuxu.org",
     "bot": "mblaze-github-bot",
     "uuid": "fa6558a0-26e0-48f6-803f-f5a8af34f6a8"
-  }
+  },
+  "void-packages": {
+    "name": "void-packages",
+    "email": "ml@inbox.vuxu.org",
+    "from": "voidlinux-github@inbox.vuxu.org",
+    "msg-id-domain": "inbox.vuxu.org",
+    "bot": "voidlinux-github-bot",
+    "uuid": "41a7ca26-5023-4802-975b-f1789d68868e"
+   }
 }
