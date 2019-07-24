@@ -51,8 +51,7 @@ def send_email(repo, email_and_name, subject,
                      'are now in MIME to allow UTF8.\n'
     outer.attach(MIMEText(body, 'plain', 'utf8'))
     if patch is not None:
-        msg = MIMEApplication(patch, 'text/x-diff',
-                              email.encoders.encode_base64)
+        msg = MIMEText(patch, 'x-diff', email.encoders.encode_base64)
         # Set the filename parameter
         msg.add_header('Content-Disposition', 'attachment',
                        filename="github-pr-%s-%d.patch" % (ref, pr_number))
