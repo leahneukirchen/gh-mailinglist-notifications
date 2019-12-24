@@ -1,9 +1,9 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 #-*- coding:utf-8 -*-
 
-import BaseHTTPServer
+import http.server
 import sys
-import urlparse
+import urllib.parse
 import json
 import hashlib
 import hmac
@@ -13,7 +13,7 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
-import urllib2
+import urllib
 from email.header import Header
 
 HOST_NAME = sys.argv[1]
@@ -53,7 +53,7 @@ def send_email(repo, email_and_name, subject,
     if patch is not None:
         msg = MIMEApplication(patch, 'x-diff',
                               email.encoders.encode_base64)
-	msg.replace_header('Content-Type', 'text/x-diff')  # hack
+        msg.replace_header('Content-Type', 'text/x-diff')  # hack
         # Set the filename parameter
         msg.add_header('Content-Disposition', 'attachment',
                        filename="github-pr-%s-%d.patch" % (ref, pr_number))
@@ -65,11 +65,11 @@ def send_email(repo, email_and_name, subject,
         s.sendmail(fromaddr, [to], msg)
         s.quit()
     else:
-        print msg
+        print(msg)
 
 def is_pull_request_url(potential_url):
     try:
-        parse_result = urlparse.urlparse(potential_url)
+        parse_result = urllib.parse.urlparse(potential_url)
         return re.search("/pull/\d+$", parse_result.path) is not None
     except ValueError:
         return False
@@ -235,7 +235,7 @@ class JsonRepos:
     def get_email_and_name(self, repo_name):
         return self.json[repo_name]
 
-class HookHandler(BaseHTTPServer.BaseHTTPRequestHandler):
+class HookHandler(http.server.BaseHTTPRequestHandler):
     server_version = "HookHandler/0.1"
     def do_GET(s):
         s.send_response(200)
@@ -244,7 +244,7 @@ class HookHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         repos = JsonRepos('repos.json')
         length = int(s.headers['Content-Length'])
         full_payload = s.rfile.read(length).decode('utf-8')
-        post_data = urlparse.parse_qs(full_payload)
+        post_data = urllib.parse.parse_qs(full_payload)
         payload = json.loads(post_data['payload'][0])
         if not DEBUG and \
            not verify_signature(full_payload, s.headers['X-Hub-Signature']):
@@ -258,7 +258,7 @@ class HookHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
 
 if __name__ == '__main__':
-    server_class = BaseHTTPServer.HTTPServer
+    server_class = http.server.HTTPServer
     httpd = server_class((HOST_NAME, PORT_NUMBER), HookHandler)
     try:
         httpd.serve_forever()
