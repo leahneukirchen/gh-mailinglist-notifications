@@ -18,7 +18,7 @@ from email.header import Header
 
 HOST_NAME = sys.argv[1]
 PORT_NUMBER = int(sys.argv[2])
-SECRET_KEY = sys.argv[3]
+SECRET_KEY = sys.argv[3].encode()
 DEBUG = len(sys.argv) >= 5;
 
 
@@ -224,7 +224,7 @@ def handle_hook(event, payload, repos):
 
 def verify_signature(payload, hub_signature):
     signature = 'sha1=' + \
-                hmac.new(SECRET_KEY, payload, hashlib.sha1).hexdigest()
+                hmac.new(SECRET_KEY, payload.encode(), hashlib.sha1).hexdigest()
     return hmac.compare_digest(signature, hub_signature)
 
 class JsonRepos:
