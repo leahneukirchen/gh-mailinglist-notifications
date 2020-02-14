@@ -245,16 +245,19 @@ class HookHandler(http.server.BaseHTTPRequestHandler):
         length = int(s.headers['Content-Length'])
         full_payload = s.rfile.read(length).decode('utf-8')
         post_data = urllib.parse.parse_qs(full_payload)
-        payload = json.loads(post_data['payload'][0])
-        if not DEBUG and \
-           not verify_signature(full_payload, s.headers['X-Hub-Signature']):
-            s.send_error(403)
-            return
+        if 'payload' in post_data:
+            payload = json.loads(post_data['payload'][0])
+            if not DEBUG and \
+               not verify_signature(full_payload, s.headers['X-Hub-Signature']):
+                s.send_error(403)
+                return
 
-        event = s.headers['X-GitHub-Event']
-        handle_hook(event, payload, repos)
+            event = s.headers['X-GitHub-Event']
+            handle_hook(event, payload, repos)
 
-        s.send_response(200)
+            s.send_response(200)
+        else:
+            s.send_response(400)
 
 
 if __name__ == '__main__':
