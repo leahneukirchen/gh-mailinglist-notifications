@@ -48,6 +48,8 @@ def send_email(repo, email_and_name, subject,
         outer.add_header("In-Reply-To", msgid)
         outer.add_header("References", msgid)
     outer['Date'] = email.utils.formatdate(localtime = True)
+    outer['List-Id'] = '<%s.gh-mailinglist-notifications.%s>' \
+                     % (email_and_name['name'], msg_id_domain)
     outer.preamble = 'GitHub notification mails ' \
                      'are now in MIME to allow UTF8.\n'
     outer.attach(MIMEText(body, 'plain', 'utf8'))
@@ -85,6 +87,8 @@ def handle_pull_request_mail(payload, repos, new_pull_req=False):
 
     repo = payload['repository']['name']
     email_and_name = repos.get_email_and_name(repo)
+    email_and_name['from'] = \
+      "{0} <{0}@users.noreply.github.com>".format(payload['sender']['login'])
     body = 'There is %s pull request by %s ' \
            'against %s on the %s repository\n\n' \
            % (action_body,
@@ -134,6 +138,8 @@ def handle_pull_request_closed(payload, repos):
     merged_or_closed = "merged" if was_merged else "closed"
     body = 'There\'s a %s pull request on the %s repository\n\n' \
            % (merged_or_closed, email_and_name['name'])
+    email_and_name['from'] = \
+      "{0} <{0}@users.noreply.github.com>".format(payload['sender']['login'])
 
     body += '%s\n%s\n\nDescription:\n%s\n' \
             % (title,
@@ -148,6 +154,8 @@ def handle_pull_request_closed(payload, repos):
 def handle_pull_request_review(payload, repos):
     repo = payload['repository']['name']
     email_and_name = repos.get_email_and_name(repo)
+    email_and_name['from'] = \
+      "{0} <{0}@users.noreply.github.com>".format(payload['sender']['login'])
     body = 'New review comment by %s on %s repository\n\n%s\n\nComment:\n%s\n' \
            % (payload['comment']['user']['login'],
               email_and_name['name'],
@@ -160,6 +168,8 @@ def handle_pull_request_review(payload, repos):
 def handle_pull_request_comment(payload, repos):
     repo = payload['repository']['name']
     email_and_name = repos.get_email_and_name(repo)
+    email_and_name['from'] = \
+      "{0} <{0}@users.noreply.github.com>".format(payload['sender']['login'])
     bot = email_and_name['bot']
     if payload['comment']['user']['login'] == bot:
         return
@@ -179,6 +189,8 @@ def handle_issue_comment(payload, repos):
 def handle_issue_opened(payload,repos):
     repo = payload['repository']['name']
     email_and_name = repos.get_email_and_name(repo)
+    email_and_name['from'] = \
+      "{0} <{0}@users.noreply.github.com>".format(payload['sender']['login'])
     body = 'New issue by %s on %s repository\n\n%s\n\nDescription:\n%s\n' \
            % (payload['issue']['user']['login'],
               email_and_name['name'],
@@ -192,6 +204,8 @@ def handle_issue_opened(payload,repos):
 def handle_issue_closed(payload,repos):
     repo = payload['repository']['name']
     email_and_name = repos.get_email_and_name(payload['repository']['name'])
+    email_and_name['from'] = \
+      "{0} <{0}@users.noreply.github.com>".format(payload['sender']['login'])
     body = 'Closed issue by %s on %s repository\n\n%s\n\nDescription:\n%s\n' \
            % (payload['issue']['user']['login'],
               email_and_name['name'],
