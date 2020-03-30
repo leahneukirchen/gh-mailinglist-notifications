@@ -4,6 +4,7 @@
 import http.server
 import sys
 import urllib.parse
+import urllib.request
 import json
 import hashlib
 import hmac
@@ -98,7 +99,7 @@ def handle_pull_request_mail(payload, repos, new_pull_req=False):
             % (payload['pull_request']['title'],
                payload['pull_request']['body'])
     try:
-        response = urllib2.urlopen(payload['pull_request']['patch_url'])
+        response = urllib.request.urlopen(payload['pull_request']['patch_url'])
         patch = response.read()
         body += "\nA patch file from %s is attached" \
                 % payload['pull_request']['patch_url']
