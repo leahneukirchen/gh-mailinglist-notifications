@@ -161,7 +161,7 @@ def handle_pull_request_review(payload, repos):
               email_and_name['name'],
               payload['comment']['html_url'],
               payload['comment']['body'])
-    title = payload['issue']['title']
+    title = payload['pull_request']['title']
     send_email(repo, email_and_name, "Re: [PR REVIEW] %s" % title, body=body,
                pr_number=payload['pull_request']['number'])
 
